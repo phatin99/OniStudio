@@ -52,11 +52,11 @@ async function HomeContent() {
           <div className="home-clean-v3-heading-row">
             <div>
               <p className="eyebrow">01 / SPACES</p>
-              <h2>{vi ? "Chọn phòng nhanh hơn." : "Pick the right room faster."}</h2>
+              <h2>{vi ? "Không gian nổi bật." : "Featured Studio Spaces."}</h2>
               <p>
                 {vi
-                  ? "Hai không gian chính được giới thiệu ngay tại đây. Toàn bộ hình ảnh và thông tin sâu hơn nằm trong trang Không gian."
-                  : "The two main spaces are introduced here. Full imagery and deeper information stay on the Spaces page."}
+                  ? "Khám phá các không gian chụp tại Oni Studio và lựa chọn phòng phù hợp với ý tưởng, quy mô ê-kíp và nhu cầu của buổi chụp."
+                  : "Explore Oni Studio's shooting spaces and find the right room for your concept, crew, and shoot."}
               </p>
             </div>
 
@@ -84,13 +84,13 @@ async function HomeContent() {
               <p className="eyebrow">02 / EQUIPMENT</p>
               <h2>
                 {vi
-                  ? "Thiết bị nổi bật. Không cần xem quá nhiều."
-                  : "Featured equipment. No need to show everything."}
+                  ? "Thiết bị nổi bật."
+                  : "Featured Equipment."}
               </h2>
               <p>
                 {vi
-                  ? "Chỉ giữ vài thiết bị tiêu biểu ở trang chủ để người xem hiểu nhanh dịch vụ mà không bị ngợp."
-                  : "Only a small selection appears here so visitors understand the offer without being overwhelmed."}
+                  ? "Khám phá các thiết bị nổi bật tại Oni Studio để lựa chọn những gì phù hợp với ý tưởng và nhu cầu của buổi chụp."
+                  : "Explore featured equipment at Oni Studio and find the right setup for your next shoot."}
               </p>
             </div>
 

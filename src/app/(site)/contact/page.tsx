@@ -62,7 +62,7 @@ export default async function Contact() {
             </div>
             <p className="oni-contact-v5-hero-note">
               {vi
-                ? "Chưa có concept hoàn chỉnh? Không sao, hãy bắt đầu từ những ý tưởng đầu tiên của bạn."
+                ? "Bạn chưa có concept hoàn chỉnh? Không sao, hãy bắt đầu từ những ý tưởng đầu tiên của bạn."
                 : "Still shaping your concept? Start by telling us what you have in mind."}
             </p>
           </div>
