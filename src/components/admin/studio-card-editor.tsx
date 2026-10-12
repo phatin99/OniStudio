@@ -157,9 +157,12 @@ export function StudioCardEditor({
   }
 
   function openPreview() {
+    // Surface missing/invalid required fields before opening the preview.
+    const form = rootRef.current?.closest("form");
+    if (!form || !form.reportValidity()) return;
+
     const next = buildSnapshot();
     if (!next) return;
-
     dialogRef.current?.showModal();
   }
 

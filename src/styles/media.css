@@ -20798,3 +20798,84 @@ html[lang="en"] .home-hero-motion-line {
   fill: #315ce8;
 }
 /* oni-contact-white-messenger-v2:end */
+
+/* oni-floating-social-v1:start */
+/* Floating client-only social links: Messenger / Instagram / Zalo. */
+.site-shell > .oni-floating-social-v1 {
+  position: fixed;
+  z-index: 90;
+  right: clamp(14px, 2vw, 28px);
+  bottom: clamp(22px, 4vh, 46px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 11px;
+  width: max-content;
+  pointer-events: auto;
+}
+
+.site-shell > .oni-floating-social-v1 .oni-floating-social-link-v1 {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  min-width: 54px;
+  min-height: 54px;
+  border: 1px solid #ecd8aa;
+  border-radius: 50%;
+  background: #fff;
+  color: #101820;
+  box-shadow: 0 6px 24px rgba(25, 29, 30, .12), 0 1px 4px rgba(25, 29, 30, .06);
+  text-decoration: none;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.site-shell > .oni-floating-social-v1 .oni-floating-social-link-v1:hover {
+  transform: translateY(-2px);
+  border-color: #c9ab68;
+  box-shadow: 0 10px 27px rgba(25, 29, 30, .16);
+}
+
+.site-shell > .oni-floating-social-v1 .oni-floating-social-link-v1:focus-visible {
+  outline: 3px solid #315df0;
+  outline-offset: 3px;
+}
+
+.site-shell > .oni-floating-social-v1 svg {
+  display: block;
+  flex: none;
+}
+
+@media (max-width: 760px) {
+  .site-shell > .oni-floating-social-v1 {
+    right: 12px;
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    gap: 9px;
+  }
+  .site-shell > .oni-floating-social-v1 .oni-floating-social-link-v1 {
+    width: 48px;
+    height: 48px;
+    min-width: 48px;
+    min-height: 48px;
+  }
+  .site-shell > .oni-floating-social-v1 svg {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-shell > .oni-floating-social-v1 .oni-floating-social-link-v1 {
+    transition: none;
+  }
+}
+/* oni-floating-social-v1:end */
+
+/* oni-hide-floating-social-gallery-v1:start */
+/* Hide fixed Messenger, Instagram, and Zalo on the public gallery only.
+   Works for /gallery and /en/gallery without a pathname effect or hydration risk.
+   Does not affect contact links in the footer or on any other page. */
+body:has(main.gallery-pinterest-page-v2) .oni-floating-social-v1 {
+  display: none !important;
+}
+/* oni-hide-floating-social-gallery-v1:end */

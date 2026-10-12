@@ -19,6 +19,7 @@ import {
   text,
   uuid,
 } from "@/lib/validation";
+import { studioSlugFromName } from "@/lib/studio-slug";
 import type { ActionState } from "@/types/catalog";
 
 export async function login(
@@ -384,6 +385,38 @@ export async function saveProp(id:string|null,_previous:ActionState,form:FormDat
 export async function deleteProp(id:string,_previous:ActionState):Promise<ActionState>{ void _previous; try{uuid(id)}catch{return{error:"ID đạo cụ không hợp lệ."}} const session=await requireAdmin().catch(()=>null); if(!session)return{error:"Vui lòng đăng nhập lại."}; const {data,error}=await session.db.from("props").delete().eq("id",id).select("id").single(); if(error||!data)return{error:"Không thể xóa đạo cụ."}; revalidateProps(id); redirect("/admin/props?deleted=1"); }
 /* oni-rental-catalog-actions-v1:end */
 
+function studioSaveError(error: {
+  code?: string;
+  message?: string;
+} | null): string {
+  if (!error) return "Không thể lưu phòng. Vui lòng thử lại.";
+  const code = error.code || "UNKNOWN";
+  const message = error.message || "";
+
+  if (code === "23505") {
+    return "Slug phòng đã tồn tại. Vui lòng chọn slug khác.";
+  }
+  if (code === "23502" && /capacity/i.test(message)) {
+    return "Supabase thiếu giá trị mặc định capacity của phòng. " +
+      "Cần áp dụng migration 140_studio_content_dimensions.sql.";
+  }
+  if (code === "PGRST204" || code === "42703" || code === "42P01") {
+    return "Cấu trúc bảng studios trong Supabase chưa đồng bộ. " +
+      "Kiểm tra migration 140_studio_content_dimensions.sql " +
+      `(mã lỗi: ${code}).`;
+  }
+  if (code === "42501" || code === "PGRST301") {
+    return "Không có quyền lưu phòng. Đăng nhập lại và kiểm tra " +
+      "public.admin_users, public.is_admin() va RLS.";
+  }
+  if (code === "23514") {
+    return "Dữ liệu phòng không đáp ứng ràng buộc database. " +
+      "Kiểm tra diện tích, giá và thông số phòng.";
+  }
+  return `Không thể lưu phòng (Supabase: ${code}). ` +
+    "Kiểm tra Terminal/SQL Editor để biết chi tiết.";
+}
+
 export async function saveStudio(
   id: string | null,
   _previous: ActionState,
@@ -446,7 +479,7 @@ export async function saveStudio(
 
     payload = {
       name: text(form, "name", 160),
-      slug: slug(form),
+      slug: id ? slug(form) : studioSlugFromName(text(form, "name", 160)),
       description: {
         vi: text(form, "description_vi"),
         en: text(form, "description_en"),
@@ -678,7 +711,7 @@ export async function saveStudio(
       .select("id")
       .single();
 
-    if (error || !data) return { error: dbMessage(error?.code) };
+    if (error || !data) return { error: studioSaveError(error) };
 
     revalidateStudios(data.id);
     redirect("/admin/studios?saved=1");
@@ -692,7 +725,7 @@ export async function saveStudio(
     .maybeSingle();
 
   if (orderError) {
-    return { error: "Không thể xác định vị trí phòng mới." };
+    return { error: studioSaveError(orderError) };
   }
 
   const nextOrder = Math.min(
@@ -700,19 +733,30 @@ export async function saveStudio(
     100000,
   );
 
-  const { data, error } = await session.db
-    .from("studios")
-    .insert({
-      ...payload,
-      sort_order: nextOrder,
-    })
-    .select("id")
-    .single();
+  // oni-studio-slug-autogen-v1:start
+  // A unique DB constraint makes this safe even when two admins create the same name.
+  const baseSlug = payload.slug;
+  for (let number = 1; number <= 100; number += 1) {
+    const suffix = number === 1 ? "" : `-${number}`;
+    const candidate = `${baseSlug.slice(0, 120 - suffix.length)}${suffix}`;
+    const { data, error } = await session.db
+      .from("studios")
+      .insert({ ...payload, slug: candidate, sort_order: nextOrder })
+      .select("id")
+      .single();
 
-  if (error || !data) return { error: dbMessage(error?.code) };
+    if (!error && data) {
+      revalidateStudios(data.id);
+      redirect("/admin/studios?saved=1");
+    }
 
-  revalidateStudios(data.id);
-  redirect("/admin/studios?saved=1");
+    // Retry only collisions of the slug; other DB errors must stay visible.
+    if (error?.code !== "23505" || !/slug/i.test(`${error.message ?? ""} ${error.details ?? ""}`)) {
+      return { error: studioSaveError(error) };
+    }
+  }
+  return { error: "Không tìm được đường dẫn phòng còn trống. Hãy đặt tên khác." };
+  // oni-studio-slug-autogen-v1:end
 }
 
 

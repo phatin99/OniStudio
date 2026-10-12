@@ -3,6 +3,7 @@
 import { useActionState, useMemo, useState } from "react";
 import { ChevronDown, Trash2 } from "lucide-react";
 import { deleteStudio, saveStudio } from "@/app/admin/actions";
+import { studioSlugFromName } from "@/lib/studio-slug";
 import {
   DEFAULT_STUDIO_DETAIL_CONTENT,
   normalizeStudioDetailContent,
@@ -30,6 +31,8 @@ export function StudioForm({
     item?.images ?? [],
   );
   const editing = Boolean(item);
+  // oni-studio-auto-slug-v1: The preview follows the room name while creating.
+  const [roomName, setRoomName] = useState(item?.name ?? "");
 
   const detail = useMemo(
     () =>
@@ -66,22 +69,29 @@ export function StudioForm({
               name="name"
               required
               maxLength={160}
-              defaultValue={item?.name ?? ""}
+              value={roomName}
+              onChange={(event) => setRoomName(event.target.value)}
               placeholder="Room D"
             />
           </label>
 
           <label className="form-field">
-            <span>Slug</span>
+            <span>{editing ? "Slug" : "Slug tự động"}</span>
             <input
               name="slug"
               required
               maxLength={120}
               pattern="[a-z0-9]+(-[a-z0-9]+)*"
-              defaultValue={item?.slug ?? ""}
-              placeholder="room-d"
+              defaultValue={editing ? item?.slug ?? "" : undefined}
+              value={!editing ? (roomName.trim() ? studioSlugFromName(roomName) : "") : undefined}
+              readOnly={!editing}
+              placeholder={editing ? "room-d" : "Tự tạo khi nhập tên phòng"}
             />
-            <small>Chữ thường không dấu, số và dấu gạch nối.</small>
+            <small>
+              {editing
+                ? "Có thể sửa slug thủ công nếu thực sự cần đổi đường dẫn phòng."
+                : "Tạo từ tên phòng; nếu trùng, hệ thống tự thêm -2, -3 khi lưu."}
+            </small>
           </label>
 
           <label className="form-field">

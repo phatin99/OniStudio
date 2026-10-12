@@ -39,6 +39,21 @@ export async function proxy(request: NextRequest) {
   );
   if (isConfigured() && protectedAdmin && hasAuthCookies) {
     const { url: dbUrl, key } = supabaseConfig();
+    const authCookiePattern = /^sb-[a-z0-9-]+-auth-token(?:\.\d+)?$/i;
+
+    // A failed refresh must be removed from both the downstream request and
+    // browser response. Otherwise the protected layout can retry the same token.
+    function clearInvalidSession() {
+      const names = request.cookies.getAll()
+        .filter(({ name }) => authCookiePattern.test(name))
+        .map(({ name }) => name);
+
+      for (const name of names) request.cookies.delete(name);
+      headers.set("cookie", request.cookies.toString());
+      response = NextResponse.next({ request: { headers } });
+      for (const name of names) response.cookies.delete(name);
+    }
+
     const db = createServerClient(dbUrl, key, {
       cookies: {
         getAll: () => request.cookies.getAll(),
@@ -52,26 +67,13 @@ export async function proxy(request: NextRequest) {
         },
       },
     });
+
     try {
       const { error } = await db.auth.getClaims();
-      if (error && isStaleRefreshToken(error)) {
-        // Expired refresh tokens cannot be reused. Clear only Supabase auth cookies.
-        // Authorization itself remains in requireAdminPage()/public.is_admin().
-        for (const { name } of request.cookies.getAll()) {
-          if (/^sb-[a-z0-9-]+-auth-token(?:\.\d+)?$/i.test(name)) {
-            request.cookies.delete(name);
-            response.cookies.delete(name);
-          }
-        }
-      }
+      if (error && isStaleRefreshToken(error)) clearInvalidSession();
     } catch (error) {
       if (!isStaleRefreshToken(error)) throw error;
-      for (const { name } of request.cookies.getAll()) {
-        if (/^sb-[a-z0-9-]+-auth-token(?:\.\d+)?$/i.test(name)) {
-          request.cookies.delete(name);
-          response.cookies.delete(name);
-        }
-      }
+      clearInvalidSession();
     }
     response.headers.set("Cache-Control", "private, no-store");
   }
