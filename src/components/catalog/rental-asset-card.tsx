@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "@/components/ui/nav-link";
 import {
-  ArrowUpRight,
   ImageIcon,
   Images,
 } from "lucide-react";
@@ -142,10 +141,6 @@ export function RentalAssetCard({
           </p>
         )}
 
-        <Link className="equipment-card-view" href={detailHref}>
-          {locale === "vi" ? "Xem hình ảnh" : "View images"}
-          <ArrowUpRight size={16} aria-hidden="true" />
-        </Link>
       </div>
     </article>
   );

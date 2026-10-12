@@ -204,6 +204,7 @@ export function EquipmentExplorer({
         <div className="equipment-grid">
           {filtered.map((item) => (
             <EquipmentCard
+              compact
               key={item.id}
               item={item}
               allEquipment={items}

@@ -21068,3 +21068,158 @@ body:has(main.gallery-pinterest-page-v2) .oni-floating-social-v1 {
 }
 /* oni-home-featured-spaces-carousel-v1:end */
 
+/* oni-equipment-catalog-compact-v1:start */
+/* Only the client Equipment listing uses these smaller cards. */
+.equipment-card-compact-v1 .equipment-card-body-v4 {
+  min-height: 0 !important;
+  padding-bottom: 18px;
+}
+
+.equipment-card-compact-v1 h3 {
+  min-height: 0;
+}
+
+.equipment-card-compact-v1 .equipment-card-description {
+  margin-bottom: 0 !important;
+}
+/* oni-equipment-catalog-compact-v1:end */
+
+/* oni-studios-equal-images-v1:start */
+/*
+ * Studio listing ONLY: neutralize older first-card/non-first-card
+ * aspect-ratio rules without changing homepage studio carousels.
+ */
+.studios-showcase .studio-grid-v2 > .studio-card-v2 .room-visual.studio-card-media {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  flex: 0 0 auto;
+  overflow: hidden;
+}
+
+.studios-showcase .studio-grid-v2 > .studio-card-v2 .studio-card-media .studio-card-slideshow-v25 {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.studios-showcase .studio-grid-v2 > .studio-card-v2 .studio-card-media .room-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 640px) {
+  .studios-showcase .studio-grid-v2 > .studio-card-v2 .room-visual.studio-card-media {
+    aspect-ratio: 4 / 3;
+  }
+}
+/* oni-studios-equal-images-v1:end */
+
+/* oni-home-equipment-compact-scroll-v2:start */
+/* Homepage equipment only; preserve catalog cards and admin screens. */
+.home-clean-v33 .home-clean-v3-card-grid--four > .equipment-card {
+  min-width: 0;
+}
+
+.home-clean-v33 .home-clean-v3-card-grid--four .equipment-card-view {
+  display: none !important;
+}
+
+.home-clean-v33 .home-clean-v3-card-grid--four .equipment-card-body-v4 {
+  min-height: 0 !important;
+  padding-bottom: clamp(16px, 2vw, 22px);
+}
+
+.home-clean-v33 .home-clean-v3-card-grid--four .equipment-card-description {
+  margin-bottom: 0 !important;
+}
+
+/* Tablet: a horizontal row with the next item peeking into view. */
+@media (max-width: 1100px) {
+  .home-clean-v33 .home-clean-v3-card-grid--four {
+    display: grid;
+    grid-template-columns: none !important;
+    grid-auto-flow: column;
+    grid-auto-columns: 44%;
+    gap: 16px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 2px 2px 12px;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 2px;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .home-clean-v33 .home-clean-v3-card-grid--four::-webkit-scrollbar {
+    display: none;
+  }
+
+  .home-clean-v33 .home-clean-v3-card-grid--four > .equipment-card {
+    width: 100%;
+    height: 100%;
+    scroll-snap-align: start;
+  }
+}
+
+/* Mobile: a full card plus a visible hint of the next card. */
+@media (max-width: 760px) {
+  .home-clean-v33 .home-clean-v3-card-grid--four {
+    grid-auto-columns: 86%;
+    gap: 12px;
+    padding-bottom: 10px;
+  }
+}
+/* oni-home-equipment-compact-scroll-v2:end */
+
+/* oni-rental-compact-v1:start */
+/* Compact public Props / Color Backdrops / Effect Backdrops cards. */
+.rental-public-page .rental-equipment-grid {
+  align-items: start;
+}
+
+.rental-public-page .rental-equipment-card {
+  height: auto !important;
+  min-height: 0 !important;
+  align-self: start;
+}
+
+.rental-public-page .rental-equipment-card .rental-equipment-card-body {
+  min-height: 0 !important;
+  height: auto !important;
+  flex: 0 1 auto;
+  gap: 0;
+  padding: 18px 18px 20px;
+}
+
+.rental-public-page .rental-equipment-card h3 {
+  margin-bottom: 10px;
+  line-height: 1.4;
+  letter-spacing: -0.015em;
+}
+
+.rental-public-page .rental-equipment-card .equipment-price {
+  margin: 0 0 10px !important;
+}
+
+.rental-public-page .rental-equipment-card .equipment-card-description {
+  min-height: 0 !important;
+  margin: 0 !important;
+  line-height: 1.6;
+}
+
+/* Defensive fallback if a future card variant still renders a CTA. */
+.rental-public-page .rental-equipment-card .equipment-card-view {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  .rental-public-page .rental-equipment-card .rental-equipment-card-body {
+    padding: 16px 16px 18px;
+  }
+}
+/* oni-rental-compact-v1:end */

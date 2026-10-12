@@ -19,11 +19,13 @@ export function EquipmentCard({
   allEquipment = [],
   categories,
   locale,
+  compact = false,
 }: {
   item: Equipment;
   allEquipment?: Equipment[];
   categories: EquipmentCategory[];
   locale: Locale;
+  compact?: boolean;
 }) {
   const { images, reference } = equipmentImages(item);
   const cover = images[0];
@@ -53,7 +55,7 @@ export function EquipmentCard({
     item.included_equipment_ids?.length ?? includedItems.length;
 
   return (
-    <article className="equipment-card equipment-card-v4">
+    <article className={`equipment-card equipment-card-v4${compact ? " equipment-card-compact-v1" : ""}`}>
       <Link className="equipment-image" href={detailHref}>
         {cover ? (
           <Image
@@ -163,10 +165,12 @@ export function EquipmentCard({
 
         <p className="equipment-card-description">{description}</p>
 
-        <Link className="equipment-card-view" href={detailHref}>
-          {locale === "vi" ? "Xem hình ảnh" : "View images"}
-          <ArrowUpRight size={16} aria-hidden="true" />
-        </Link>
+        {!compact && (
+          <Link className="equipment-card-view" href={detailHref}>
+            {locale === "vi" ? "Xem hình ảnh" : "View images"}
+            <ArrowUpRight size={16} aria-hidden="true" />
+          </Link>
+        )}
       </div>
     </article>
   );
