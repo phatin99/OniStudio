@@ -21223,3 +21223,45 @@ body:has(main.gallery-pinterest-page-v2) .oni-floating-social-v1 {
   }
 }
 /* oni-rental-compact-v1:end */
+
+/* oni-equipment-image-count-v2:start */
+/* Hidden on homepage: only show the photo counter in the equipment catalogue. */
+.equipment-card .equipment-image-count-v2 {
+  position: absolute;
+  z-index: 4;
+  top: 12px;
+  right: 12px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(20, 28, 45, .08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .94);
+  color: #17213a;
+  font-size: .69rem;
+  font-weight: 750;
+  line-height: 1.2;
+  box-shadow: 0 6px 18px rgba(20, 28, 45, .08);
+  pointer-events: none;
+}
+
+.equipment-grid .equipment-card .equipment-image-count-v2 {
+  display: inline-flex;
+}
+
+.equipment-card .equipment-image-count-v2 svg {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 600px) {
+  .equipment-card .equipment-image-count-v2 {
+    top: 10px;
+    right: 10px;
+    min-height: 28px;
+    padding: 0 9px;
+  }
+}
+/* oni-equipment-image-count-v2:end */
