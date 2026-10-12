@@ -20879,3 +20879,192 @@ body:has(main.gallery-pinterest-page-v2) .oni-floating-social-v1 {
   display: none !important;
 }
 /* oni-hide-floating-social-gallery-v1:end */
+
+/* oni-home-featured-spaces-carousel-v1:start */
+.home-clean-v33 .home-studios-carousel-v1 {
+  min-width: 0;
+  width: 100%;
+}
+
+.home-studios-carousel-toolbar-v1 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 45px;
+  margin: -7px 0 14px;
+}
+
+.home-studios-carousel-help-v1 {
+  color: #737984;
+  font-size: 0.76rem;
+  line-height: 1.6;
+}
+
+.home-studios-carousel-controls-v1 {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-studios-carousel-controls-v1 button {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid #d8dce3;
+  border-radius: 999px;
+  color: #1b2531;
+  background: #fff;
+  transition: background 160ms ease, border-color 160ms ease;
+}
+
+.home-studios-carousel-controls-v1 button:hover:not(:disabled) {
+  color: #254fe5;
+  background: #f2f5ff;
+  border-color: #b8c9ff;
+}
+
+.home-studios-carousel-controls-v1 button:disabled {
+  cursor: default;
+  opacity: 0.3;
+}
+
+.home-studios-carousel-controls-v1 button:focus-visible,
+.home-studios-carousel-track-v1:focus-visible {
+  outline: 2px solid #315feb;
+  outline-offset: 3px;
+}
+
+.home-studios-carousel-track-v1 {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 2px 20px;
+  scroll-snap-type: x mandatory;
+  scroll-padding-left: 2px;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  cursor: grab;
+}
+
+.home-studios-carousel-track-v1:active {
+  cursor: grabbing;
+}
+
+.home-studios-carousel-track-v1::-webkit-scrollbar {
+  display: none;
+}
+
+.home-studios-carousel-track-v1 > .home-studios-slide-v1 {
+  flex: 0 0 calc((100% - 32px) / 3);
+  display: flex;
+  min-width: 0;
+  scroll-snap-align: start;
+}
+
+.home-studios-slide-v1 .studio-card-v2 {
+  width: 100%;
+  height: 100%;
+}
+
+.home-studios-slide-v1 .studio-card-v2 .studio-card-content {
+  padding: 17px 18px;
+}
+
+.home-studios-slide-v1 .studio-card-v2 .studio-card-media {
+  aspect-ratio: 16 / 10;
+}
+
+.home-studios-slide-v1 .studio-card-v2 .studio-card-media-top,
+.home-studios-slide-v1 .studio-card-v2 .studio-card-media-bottom {
+  left: 15px;
+  right: 15px;
+}
+
+.home-studios-slide-v1 .studio-card-v2 .studio-card-media-bottom {
+  font-size: clamp(1.05rem, 1.6vw, 1.45rem);
+  bottom: 14px;
+}
+
+.home-studios-slide-v1 .studio-card-v2 .studio-card-title-row {
+  gap: 8px;
+}
+
+.home-studios-slide-v1 .studio-card-v2 .studio-card-title-row h3 {
+  font-size: clamp(1.03rem, 1.55vw, 1.33rem);
+  line-height: 1.38;
+  letter-spacing: -0.015em;
+}
+
+.home-studios-slide-v1 .studio-card-v2 .studio-card-description {
+  font-size: 0.78rem;
+  line-height: 1.6;
+  min-height: 0;
+  margin-top: 10px;
+}
+
+.home-studios-slide-v1 .studio-card-v2 .studio-card-facts {
+  margin-top: 12px;
+  padding: 11px 0;
+  gap: 8px 12px;
+  font-size: 0.73rem;
+}
+
+.home-studios-slide-v1 .studio-card-v2 .studio-card-footer {
+  padding-top: 12px;
+}
+
+.home-studios-slide-v1 .studio-card-v2 .studio-explore-button {
+  min-height: 39px;
+  padding: 8px 12px;
+  font-size: 0.72rem;
+}
+
+.home-studios-slide-v1 .studio-card-v2 .studio-card-availability {
+  min-height: 27px;
+  padding-inline: 8px;
+  font-size: 0.6rem;
+}
+
+@media (min-width: 700px) and (max-width: 1199px) {
+  .home-studios-carousel-track-v1 > .home-studios-slide-v1 {
+    flex-basis: calc((100% - 16px) / 2);
+  }
+}
+
+@media (max-width: 699px) {
+  .home-studios-carousel-track-v1 {
+    gap: 12px;
+    padding-bottom: 16px;
+  }
+
+  .home-studios-carousel-track-v1 > .home-studios-slide-v1 {
+    flex-basis: min(85%, 370px);
+  }
+
+  .home-studios-carousel-toolbar-v1 {
+    margin-top: -3px;
+    margin-bottom: 11px;
+  }
+
+  .home-studios-carousel-help-v1 {
+    font-size: 0.7rem;
+  }
+
+  .home-studios-slide-v1 .studio-card-v2 .studio-card-media {
+    aspect-ratio: 16 / 10;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-studios-carousel-controls-v1 button,
+  .home-studios-slide-v1 .studio-card-v2 {
+    transition: none;
+  }
+}
+/* oni-home-featured-spaces-carousel-v1:end */
+

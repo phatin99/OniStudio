@@ -4,6 +4,7 @@ import PageLoading from "@/components/ui/page-loading";
 import { HomeHeroMotion } from "@/components/home/home-hero-motion";
 import Link from "@/components/ui/nav-link";
 import { StudioCard } from "@/components/catalog/studio-card";
+import { HomeStudiosCarousel } from "@/components/home/home-studios-carousel";
 import { EquipmentCard } from "@/components/catalog/equipment-card";
 import { getCatalog } from "@/lib/catalog";
 import { context, href } from "@/lib/i18n";
@@ -27,7 +28,7 @@ async function HomeContent() {
   ]);
 
   const vi = locale === "vi";
-  const featuredStudios = studios.slice(0, 2);
+  const featuredStudios = studios;
   const featuredEquipment = equipment.filter((item) => item.featured).slice(0, 4);
   const equipmentPreview =
     featuredEquipment.length > 0 ? featuredEquipment : equipment.slice(0, 4);
@@ -69,11 +70,13 @@ async function HomeContent() {
             </Link>
           </div>
 
-          <div className="home-clean-v3-card-grid home-clean-v3-card-grid--two">
-            {featuredStudios.map((studio) => (
-              <StudioCard key={studio.id} studio={studio} locale={locale} />
+                    <HomeStudiosCarousel count={featuredStudios.length} locale={locale}>
+            {featuredStudios.map((studio, index) => (
+              <div className="home-studios-slide-v1" key={studio.id}>
+                <StudioCard studio={studio} locale={locale} index={index + 1} />
+              </div>
             ))}
-          </div>
+          </HomeStudiosCarousel>
         </div>
       </section>
 

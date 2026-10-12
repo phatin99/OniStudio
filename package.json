@@ -1,37 +1,38 @@
 {
-  "name": "oni-studio",
-  "version": "1.0.0",
-  "private": true,
-  "engines": {
-    "node": ">=22.0.0"
-  },
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "typecheck": "next typegen && tsc --noEmit",
-    "lint": "eslint . --max-warnings=0",
-    "check": "npm run typecheck && npm run lint && npm run build"
-  },
-  "dependencies": {
-    "@gsap/react": "^2.1.2",
-    "@supabase/ssr": "0.12.7",
-    "@supabase/supabase-js": "^2.99.0",
-    "gsap": "^3.15.0",
-    "lucide-react": "^0.577.0",
-    "next": "16.3.8",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "server-only": "^0.0.1"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "4.3.3",
-    "@types/node": "^22.0.0",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
-    "eslint": "^9.0.0",
-    "eslint-config-next": "16.3.8",
-    "tailwindcss": "4.3.3",
-    "typescript": "^5.9.3"
-  }
+    "name":  "oni-studio",
+    "version":  "1.0.0",
+    "private":  true,
+    "engines":  {
+                    "node":  "\u003e=22.0.0"
+                },
+    "scripts":  {
+                    "dev":  "next dev --webpack",
+                    "build":  "next build",
+                    "start":  "next start",
+                    "typecheck":  "next typegen \u0026\u0026 tsc --noEmit",
+                    "lint":  "eslint . --max-warnings=0",
+                    "check":  "npm run typecheck \u0026\u0026 npm run lint \u0026\u0026 npm run build",
+                    "dev:turbopack":  "next dev"
+                },
+    "dependencies":  {
+                         "@gsap/react":  "^2.1.2",
+                         "@supabase/ssr":  "0.12.7",
+                         "@supabase/supabase-js":  "^2.99.0",
+                         "gsap":  "^3.15.0",
+                         "lucide-react":  "^0.577.0",
+                         "next":  "16.3.8",
+                         "react":  "^19.2.0",
+                         "react-dom":  "^19.2.0",
+                         "server-only":  "^0.0.1"
+                     },
+    "devDependencies":  {
+                            "@tailwindcss/postcss":  "4.3.3",
+                            "@types/node":  "^22.0.0",
+                            "@types/react":  "^19.2.0",
+                            "@types/react-dom":  "^19.2.0",
+                            "eslint":  "^9.0.0",
+                            "eslint-config-next":  "16.3.8",
+                            "tailwindcss":  "4.3.3",
+                            "typescript":  "^5.9.3"
+                        }
 }
