@@ -164,6 +164,7 @@ export default async function StudioDetail({ params }: Props) {
       </div>
 
       <ProductGallery
+        fastStudioImages
         images={
           studio.images.length
             ? studio.images

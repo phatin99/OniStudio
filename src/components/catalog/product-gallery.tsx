@@ -1,14 +1,43 @@
 "use client";
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Maximize2, X } from "lucide-react";
 import type { Locale } from "@/types/catalog";
+
+// oni-room-gallery-speed-v1: helpers
+const ROOM_MAIN_SIZES = "(max-width: 800px) 100vw, (max-width: 1400px) 90vw, 1120px";
+const ROOM_PRELOAD_WIDTHS = [640, 750, 828, 1080, 1200, 1920];
+
+function isStudioCloudinaryImage(src: string) {
+  return /^https:\/\/res\.cloudinary\.com\/[^/]+\/image\/upload\//i.test(src);
+}
+
+function studioCloudinaryLoader({
+  src,
+  width,
+  quality,
+}: {
+  src: string;
+  width: number;
+  quality?: number;
+}) {
+  if (!isStudioCloudinaryImage(src)) return src;
+  const thumbnail = quality !== undefined && quality < 70;
+  const optimizedWidth = Math.min(Math.max(1, Math.round(width)), thumbnail ? 256 : 1920);
+  const autoQuality = thumbnail ? "q_auto:eco" : "q_auto:good";
+  return src.replace(
+    "/image/upload/",
+    `/image/upload/f_auto,${autoQuality},c_limit,w_${optimizedWidth}/`,
+  );
+}
+// oni-room-gallery-speed-v1: helpers end
 export function ProductGallery({
   images,
   name,
   locale,
   fit = "contain",
   caption,
+  fastStudioImages = false,
   adaptiveAspectRatio = false,
 }: {
   images: string[];
@@ -16,9 +45,11 @@ export function ProductGallery({
   locale: Locale;
   fit?: "contain" | "cover";
   caption?: string;
+  fastStudioImages?: boolean;
   adaptiveAspectRatio?: boolean;
 }) {
   const [selected, setSelected] = useState(0);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [aspectRatios, setAspectRatios] = useState<Record<string, number>>({});
   const dialog = useRef<HTMLDialogElement>(null);
   const start = useRef<{ x: number; y: number } | null>(null);
@@ -27,6 +58,28 @@ export function ProductGallery({
   }
   const label = locale === "vi" ? "ảnh" : "image";
   const current = Math.min(selected, images.length - 1);
+  const prefetchedRoomPhotos = useRef<Set<string>>(new Set());
+  const pendingRoomPhoto = useRef<HTMLImageElement | null>(null);
+  useEffect(() => {
+    if (!fastStudioImages || images.length < 2) return;
+    const upcoming = images[(current + 1) % images.length];
+    if (!upcoming || !isStudioCloudinaryImage(upcoming) || prefetchedRoomPhotos.current.has(upcoming)) return;
+
+    // Let the visible image start loading first; then warm the next image cache.
+    const preloadTimer = window.setTimeout(() => {
+      if (prefetchedRoomPhotos.current.has(upcoming)) return;
+      prefetchedRoomPhotos.current.add(upcoming);
+      const photo = new window.Image();
+      photo.decoding = "async";
+      photo.sizes = ROOM_MAIN_SIZES;
+      photo.srcset = ROOM_PRELOAD_WIDTHS.map(
+        (width) => `${studioCloudinaryLoader({ src: upcoming, width, quality: 82 })} ${width}w`,
+      ).join(", ");
+      photo.src = studioCloudinaryLoader({ src: upcoming, width: 1200, quality: 82 });
+      pendingRoomPhoto.current = photo;
+    }, 450);
+    return () => window.clearTimeout(preloadTimer);
+  }, [current, fastStudioImages, images]);
   if (!images.length) return null;
   return (
     <div
@@ -66,9 +119,11 @@ export function ProductGallery({
         <Image
           key={images[current]}
           src={images[current]}
+          loader={fastStudioImages && isStudioCloudinaryImage(images[current]) ? studioCloudinaryLoader : undefined}
+          quality={fastStudioImages ? 82 : undefined}
           alt={`${name} — ${label} ${current + 1}`}
           fill
-          sizes={adaptiveAspectRatio ? "(max-width: 800px) 100vw, (max-width: 1400px) 90vw, 1600px" : "(max-width: 800px) 100vw, 60vw"}
+          sizes={fastStudioImages ? ROOM_MAIN_SIZES : adaptiveAspectRatio ? "(max-width: 800px) 100vw, (max-width: 1400px) 90vw, 1600px" : "(max-width: 800px) 100vw, 60vw"}
           priority={current === 0}
           onLoad={(event) => {
             if (!adaptiveAspectRatio) return;
@@ -86,7 +141,10 @@ export function ProductGallery({
         <button
           className="icon-button gallery-expand"
           aria-label={locale === "vi" ? "Phóng to ảnh" : "Enlarge image"}
-          onClick={() => dialog.current?.showModal()}
+          onClick={() => {
+            setIsDialogOpen(true);
+            dialog.current?.showModal();
+          }}
         >
           <Maximize2 size={18} />
         </button>
@@ -125,13 +183,22 @@ export function ProductGallery({
               aria-pressed={current === index}
               onClick={() => setSelected(index)}
             >
-              <Image src={src} alt="" fill sizes="90px" />
+              <Image
+                src={src}
+                alt=""
+                fill
+                sizes="90px"
+                loading="lazy"
+                loader={fastStudioImages && isStudioCloudinaryImage(src) ? studioCloudinaryLoader : undefined}
+                quality={fastStudioImages ? 60 : undefined}
+              />
             </button>
           ))}
         </div>
       )}
       <dialog
         ref={dialog}
+        onClose={() => setIsDialogOpen(false)}
         className="lightbox product-lightbox"
         aria-label={`${name} — ${locale === "vi" ? "Xem ảnh lớn" : "Image viewer"}`}
         onClick={(e) => {
@@ -146,12 +213,16 @@ export function ProductGallery({
           <X />
         </button>
         <div className="lightbox-image">
+          {(!fastStudioImages || isDialogOpen) && (
           <Image
             src={images[current]}
             alt={`${name} — ${label} ${current + 1}`}
             fill
-            sizes="95vw"
+            sizes={fastStudioImages ? "100vw" : "95vw"}
+            loader={fastStudioImages && isStudioCloudinaryImage(images[current]) ? studioCloudinaryLoader : undefined}
+            quality={fastStudioImages ? 82 : undefined}
           />
+          )}
         </div>
         {images.length > 1 && (
           <div className="lightbox-controls">
