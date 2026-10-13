@@ -1,43 +1,41 @@
 "use client";
+// oni-detail-editor-redesign-v2
 
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
-import {
+  AlertCircle,
+  BookOpenText,
+  CheckCircle2,
+  Clock3,
+  FileText,
+  LayoutList,
+  MessageCircle,
   Plus,
   Save,
   Trash2,
 } from "lucide-react";
 import { saveStudioDetailContent } from "@/app/admin/actions";
-import type {
-  Locale,
-  StudioDetailContent,
-} from "@/types/catalog";
+import { studioDetailBlocks, studioDetailRules } from "@/data/studio-detail";
+import type { Locale, StudioDetailContent } from "@/types/catalog";
 
-type GroupItem = {
-  id: string;
-  title: string;
-  body: string;
-};
+type GroupItem = { id: string; title: string; body: string };
+type RuleItem = { id: string; text: string };
+type Snackbar = { kind: "success" | "error"; message: string };
 
-type RuleItem = {
-  id: string;
-  text: string;
-};
+type LocalizedList<T> = Record<Locale, T[]>;
 
-type SnackbarState = {
-  type: "success" | "error";
-  text: string;
-};
+const languages: { code: Locale; label: string }[] = [
+  { code: "vi", label: "Tiếng Việt" },
+  { code: "en", label: "English" },
+];
 
-const localeLabel: Record<Locale, string> = {
-  vi: "Tiếng Việt",
-  en: "English",
-};
+const sectionLinks = [
+  { id: "quick", vi: "Thông tin nhanh", en: "Quick info", icon: Clock3 },
+  { id: "intro", vi: "Giới thiệu", en: "Introduction", icon: BookOpenText },
+  { id: "amenities", vi: "Không gian & thiết bị", en: "Space & equipment", icon: LayoutList },
+  { id: "rules", vi: "Quy định & lưu ý", en: "Rules & notes", icon: FileText },
+  { id: "contact", vi: "Liên hệ", en: "Contact", icon: MessageCircle },
+];
 
 function cleanLegacyText(value: string, locale: Locale) {
   let next = value || "";
@@ -48,10 +46,7 @@ function cleanLegacyText(value: string, locale: Locale) {
         "Gửi tên {room_name}, ngày chụp, thời lượng và nhu cầu thiết bị cho Oni để kiểm tra lịch.",
         "Gửi ngày chụp, thời lượng và nhu cầu thiết bị cho Oni để kiểm tra lịch.",
       )
-      .replace(
-        "{led_count} đèn LED Nanlite 300B",
-        "đèn LED Nanlite 300B",
-      )
+      .replace("{led_count} đèn LED Nanlite 300B", "đèn LED Nanlite 300B")
       .replaceAll("{room_name}", "phòng")
       .replaceAll("{led_count}", "");
   } else {
@@ -60,62 +55,31 @@ function cleanLegacyText(value: string, locale: Locale) {
         "Send Oni the room name ({room_name}), date, duration and equipment needs to check availability.",
         "Send Oni the date, duration and equipment needs to check availability.",
       )
-      .replace(
-        "{led_count} Nanlite 300B LED light(s)",
-        "Nanlite 300B LED lighting",
-      )
+      .replace("{led_count} Nanlite 300B LED light(s)", "Nanlite 300B LED lighting")
       .replaceAll("{room_name}", "the room")
       .replaceAll("{led_count}", "");
   }
 
-  return next.replace(/\s{2,}/g, " ").trim();
+  // Keep real newline characters from textarea input.
+  return next.replace(/[ \t]{2,}/g, " ").trim();
 }
 
 function parseGroups(raw: string, locale: Locale): GroupItem[] {
-  const rows = cleanLegacyText(raw, locale)
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
+  const groups = studioDetailBlocks(cleanLegacyText(raw, locale)).map((group, index) => ({
+    id: `${locale}-group-${index}`,
+    title: group.title,
+    body: group.body,
+  }));
 
-  const parsed = rows.map((line, index) => {
-    const separator = line.indexOf("|");
-
-    if (separator < 0) {
-      return {
-        id: `${locale}-group-${index}`,
-        title: locale === "vi" ? `Nhóm ${index + 1}` : `Group ${index + 1}`,
-        body: line,
-      };
-    }
-
-    return {
-      id: `${locale}-group-${index}`,
-      title: line.slice(0, separator).trim(),
-      body: line.slice(separator + 1).trim(),
-    };
-  });
-
-  return parsed.length
-    ? parsed
-    : [
-        {
-          id: `${locale}-group-0`,
-          title: "",
-          body: "",
-        },
-      ];
+  return groups.length ? groups : [{ id: `${locale}-group-0`, title: "", body: "" }];
 }
 
 function serializeGroups(items: GroupItem[]) {
   return items
     .map((item) => {
-      const title = item.title.trim();
-      const body = item.body.trim();
-
+      const title = item.title.trim().replace(/[\r\n|]+/g, " ");
+      const body = item.body.replace(/\r\n?/g, "\n").trim().replace(/\n/g, "\\n");
       if (!title && !body) return "";
-      if (!title) return body;
-      if (!body) return title;
-
       return `${title} | ${body}`;
     })
     .filter(Boolean)
@@ -123,33 +87,28 @@ function serializeGroups(items: GroupItem[]) {
 }
 
 function parseRules(raw: string, locale: Locale): RuleItem[] {
-  const rows = cleanLegacyText(raw, locale)
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  return rows.length
-    ? rows.map((text, index) => ({
-        id: `${locale}-rule-${index}`,
-        text,
-      }))
-    : [
-        {
-          id: `${locale}-rule-0`,
-          text: "",
-        },
-      ];
+  const values = studioDetailRules(cleanLegacyText(raw, locale));
+  return values.length
+    ? values.map((text, index) => ({ id: `${locale}-rule-${index}`, text }))
+    : [{ id: `${locale}-rule-0`, text: "" }];
 }
 
 function serializeRules(items: RuleItem[]) {
   return items
-    .map((item) => item.text.trim())
+    .map((item) => item.text.replace(/\r\n?/g, "\n").trim().replace(/\n/g, "\\n"))
     .filter(Boolean)
     .join("\n");
 }
 
-function newId(prefix: string, currentLength: number) {
-  return `${prefix}-${currentLength}-${Math.random().toString(36).slice(2, 7)}`;
+function previewItems(body: string) {
+  return body
+    .split(/\r?\n|\s*\u00b7\s*/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function newItemId(prefix: string) {
+  return `${prefix}-${Math.random().toString(36).slice(2, 11)}`;
 }
 
 export function StudioDetailEditor({
@@ -161,529 +120,413 @@ export function StudioDetailEditor({
 }) {
   const rootRef = useRef<HTMLElement>(null);
   const [locale, setLocale] = useState<Locale>("vi");
+  const [dirty, setDirty] = useState(false);
   const [pending, startSaving] = useTransition();
-  const [snackbar, setSnackbar] = useState<SnackbarState | null>(null);
-
-  const initialAmenities = useMemo(
-    () => ({
-      vi: parseGroups(detail.amenities.vi, "vi"),
-      en: parseGroups(detail.amenities.en, "en"),
-    }),
-    [detail],
-  );
-
-  const initialRules = useMemo(
-    () => ({
-      vi: parseRules(detail.rules.vi, "vi"),
-      en: parseRules(detail.rules.en, "en"),
-    }),
-    [detail],
-  );
-
-  const [amenities, setAmenities] = useState(initialAmenities);
-  const [rules, setRules] = useState(initialRules);
+  const [snackbar, setSnackbar] = useState<Snackbar | null>(null);
+  const [amenities, setAmenities] = useState<LocalizedList<GroupItem>>(() => ({
+    vi: parseGroups(detail.amenities.vi, "vi"),
+    en: parseGroups(detail.amenities.en, "en"),
+  }));
+  const [rules, setRules] = useState<LocalizedList<RuleItem>>(() => ({
+    vi: parseRules(detail.rules.vi, "vi"),
+    en: parseRules(detail.rules.en, "en"),
+  }));
 
   useEffect(() => {
     if (!snackbar) return;
-
-    const timer = window.setTimeout(() => {
-      setSnackbar(null);
-    }, 3600);
-
-    return () => window.clearTimeout(timer);
+    const timeout = window.setTimeout(() => setSnackbar(null), 5000);
+    return () => window.clearTimeout(timeout);
   }, [snackbar]);
 
-  function updateGroup(
-    currentLocale: Locale,
-    id: string,
-    field: "title" | "body",
-    value: string,
-  ) {
+  useEffect(() => {
+    if (!dirty) return;
+    function confirmClose(event: BeforeUnloadEvent) {
+      event.preventDefault();
+    }
+    window.addEventListener("beforeunload", confirmClose);
+    return () => window.removeEventListener("beforeunload", confirmClose);
+  }, [dirty]);
+
+  function updateGroup(language: Locale, id: string, field: "title" | "body", value: string) {
     setAmenities((current) => ({
       ...current,
-      [currentLocale]: current[currentLocale].map((item) =>
+      [language]: current[language].map((item) =>
         item.id === id ? { ...item, [field]: value } : item,
       ),
     }));
+    setDirty(true);
   }
 
-  function addGroup(currentLocale: Locale) {
+  function addGroup(language: Locale) {
     setAmenities((current) => ({
       ...current,
-      [currentLocale]: [
-        ...current[currentLocale],
-        {
-          id: newId(`${currentLocale}-group`, current[currentLocale].length),
-          title: "",
-          body: "",
-        },
-      ],
+      [language]: [...current[language], { id: newItemId(`${language}-group`), title: "", body: "" }],
     }));
+    setDirty(true);
   }
 
-  function removeGroup(currentLocale: Locale, id: string) {
+  function removeGroup(language: Locale, id: string) {
     setAmenities((current) => {
-      const next = current[currentLocale].filter((item) => item.id !== id);
-
+      const remaining = current[language].filter((item) => item.id !== id);
       return {
         ...current,
-        [currentLocale]:
-          next.length > 0
-            ? next
-            : [
-                {
-                  id: newId(`${currentLocale}-group`, 0),
-                  title: "",
-                  body: "",
-                },
-              ],
+        [language]: remaining.length
+          ? remaining
+          : [{ id: newItemId(`${language}-group`), title: "", body: "" }],
       };
     });
+    setDirty(true);
   }
 
-  function updateRule(
-    currentLocale: Locale,
-    id: string,
-    value: string,
-  ) {
+  function updateRule(language: Locale, id: string, text: string) {
     setRules((current) => ({
       ...current,
-      [currentLocale]: current[currentLocale].map((item) =>
-        item.id === id ? { ...item, text: value } : item,
+      [language]: current[language].map((item) =>
+        item.id === id ? { ...item, text } : item,
       ),
     }));
+    setDirty(true);
   }
 
-  function addRule(currentLocale: Locale) {
+  function addRule(language: Locale) {
     setRules((current) => ({
       ...current,
-      [currentLocale]: [
-        ...current[currentLocale],
-        {
-          id: newId(`${currentLocale}-rule`, current[currentLocale].length),
-          text: "",
-        },
-      ],
+      [language]: [...current[language], { id: newItemId(`${language}-rule`), text: "" }],
     }));
+    setDirty(true);
   }
 
-  function removeRule(currentLocale: Locale, id: string) {
+  function removeRule(language: Locale, id: string) {
     setRules((current) => {
-      const next = current[currentLocale].filter((item) => item.id !== id);
-
+      const remaining = current[language].filter((item) => item.id !== id);
       return {
         ...current,
-        [currentLocale]:
-          next.length > 0
-            ? next
-            : [
-                {
-                  id: newId(`${currentLocale}-rule`, 0),
-                  text: "",
-                },
-              ],
+        [language]: remaining.length
+          ? remaining
+          : [{ id: newItemId(`${language}-rule`), text: "" }],
       };
     });
+    setDirty(true);
   }
 
-  function saveDetailContent() {
+  function saveDetail() {
+    if (pending) return;
     if (!studioId) {
-      setSnackbar({
-        type: "error",
-        text: "Hãy tạo phòng trước khi lưu riêng nội dung trang chi tiết.",
-      });
+      setSnackbar({ kind: "error", message: "Hãy tạo phòng trước khi lưu nội dung chi tiết." });
       return;
     }
 
-    const form = rootRef.current?.closest("form");
-
-    if (!form) {
-      setSnackbar({
-        type: "error",
-        text: "Không tìm thấy form chỉnh sửa phòng.",
-      });
-      return;
-    }
-
-    const formData = new FormData(form);
-    setSnackbar(null);
-
-    startSaving(async () => {
-      const result = await saveStudioDetailContent(studioId, formData);
-
-      if (result.error) {
+    for (const language of languages) {
+      const incompleteGroup = amenities[language.code].find(
+        (item) => item.body.trim() && !item.title.trim(),
+      );
+      if (incompleteGroup) {
+        setLocale(language.code);
         setSnackbar({
-          type: "error",
-          text: result.error,
+          kind: "error",
+          message: `Hãy nhập tên nhóm cho nội dung ${language.label} trước khi lưu.`,
         });
         return;
       }
+    }
 
-      setSnackbar({
-        type: "success",
-        text: result.success || "Đã cập nhật nội dung trang chi tiết.",
-      });
+    const form = rootRef.current?.closest("form");
+    if (!form) {
+      setSnackbar({ kind: "error", message: "Không tìm thấy biểu mẫu chỉnh sửa phòng." });
+      return;
+    }
+
+    const data = new FormData(form);
+    setSnackbar(null);
+
+    startSaving(async () => {
+      try {
+        const result = await saveStudioDetailContent(studioId, data);
+        if (result.error) {
+          setSnackbar({ kind: "error", message: result.error });
+          return;
+        }
+        setDirty(false);
+        setSnackbar({
+          kind: "success",
+          message: result.success || "Đã lưu nội dung của cả hai ngôn ngữ.",
+        });
+      } catch {
+        setSnackbar({ kind: "error", message: "Không lưu được. Vui lòng thử lại." });
+      }
     });
   }
 
   return (
-    <section ref={rootRef} className="studio-detail-editor-v3">
-      <div className="studio-detail-editor-head studio-detail-editor-head-save">
-        <div>
-          <p className="eyebrow">ROOM DETAIL CONTENT</p>
-          <h3>Nội dung trang chi tiết phòng</h3>
-          <p>
-            Chỉnh nội dung theo từng mục rõ ràng. Không cần nhớ cú pháp hoặc
-            nhập mã đặc biệt.
-          </p>
+    <section
+      className="oni-detail-editor-v2 studio-detail-editor-v3"
+      ref={rootRef}
+      onChangeCapture={() => setDirty(true)}
+    >
+      <div className="oni-detail-editor-toolbar-v2">
+        <div className="oni-detail-editor-title-v2">
+          <p className="eyebrow">ROOM CONTENT MANAGER</p>
+          <h2>Chỉnh nội dung trang phòng</h2>
+          <p>Mọi thay đổi được đồng bộ vào trang khách hàng sau khi lưu. Nhập mỗi thiết bị trên một dòng.</p>
         </div>
-
-        <div className="studio-detail-editor-actions">
-          <div className="studio-detail-language-tabs" role="tablist">
-            {(["vi", "en"] as const).map((value) => (
+        <div className="oni-detail-editor-toolbar-actions-v2">
+          <div className="studio-detail-language-tabs" role="tablist" aria-label="Ngôn ngữ chỉnh sửa">
+            {languages.map((language) => (
               <button
-                key={value}
+                key={language.code}
                 type="button"
                 role="tab"
-                aria-selected={locale === value}
-                className={
-                  locale === value
-                    ? "studio-detail-language-tab is-active"
-                    : "studio-detail-language-tab"
-                }
-                onClick={() => setLocale(value)}
+                className={`studio-detail-language-tab${locale === language.code ? " is-active" : ""}`}
+                aria-selected={locale === language.code}
+                onClick={() => setLocale(language.code)}
               >
-                {localeLabel[value]}
+                {language.label}
               </button>
             ))}
           </div>
-
-          <button
-            type="button"
-            className="button studio-detail-save-button"
-            disabled={pending || !studioId}
-            onClick={saveDetailContent}
-            title={
-              studioId
-                ? "Lưu riêng nội dung trang chi tiết"
-                : "Tạo phòng trước để dùng chức năng này"
-            }
-          >
-            <Save size={16} aria-hidden="true" />
-            {pending ? "Đang lưu..." : "Cập nhật nội dung"}
-          </button>
+          <span className={`oni-detail-editor-status-v2${dirty ? " is-dirty" : ""}`} role="status">
+            {dirty ? <AlertCircle size={16} aria-hidden="true" /> : <CheckCircle2 size={16} aria-hidden="true" />}
+            {dirty ? "Có thay đổi chưa lưu" : "Chưa có thay đổi"}
+          </span>
         </div>
       </div>
 
-      {(["vi", "en"] as const).map((value) => {
-        const vi = value === "vi";
+      {languages.map((language) => {
+        const lang = language.code;
+        const vi = lang === "vi";
+        const sectionId = (part: string) => `oni-editor-${lang}-${part}`;
 
         return (
           <div
-            key={value}
-            className="studio-detail-language-panel"
+            key={lang}
+            className="studio-detail-language-panel oni-detail-editor-panel-v2"
             role="tabpanel"
-            hidden={locale !== value}
+            hidden={locale !== lang}
           >
-            <section className="studio-detail-content-card">
-              <div className="studio-detail-content-card-head">
-                <div>
-                  <strong>{vi ? "Thông tin nhanh" : "Quick information"}</strong>
-                  <span>
-                    {vi
-                      ? "Thông tin ngắn hiển thị cạnh biểu tượng đồng hồ."
-                      : "Short information shown beside the clock icon."}
-                  </span>
+            <nav className="oni-detail-editor-nav-v2" aria-label={vi ? "Chuyển nhanh đến mục" : "Jump to section"}>
+              <p>{vi ? "MỤC CHỈNH SỬA" : "SECTIONS"}</p>
+              {sectionLinks.map((section, index) => {
+                const Icon = section.icon;
+                return (
+                  <a key={section.id} href={`#${sectionId(section.id)}`}>
+                    <span className="oni-detail-editor-nav-number-v2">{String(index + 1).padStart(2, "0")}</span>
+                    <Icon size={16} aria-hidden="true" />
+                    <span>{section[lang]}</span>
+                  </a>
+                );
+              })}
+            </nav>
+
+            <div className="oni-detail-editor-sections-v2">
+              <section className="studio-detail-content-card oni-detail-editor-section-v2" id={sectionId("quick")}>
+                <div className="studio-detail-content-card-head">
+                  <div>
+                    <span className="oni-detail-editor-kicker-v2">01 / {vi ? "THÔNG TIN" : "INFO"}</span>
+                    <strong>{vi ? "Thông tin nhanh" : "Quick information"}</strong>
+                    <span>{vi ? "Hiển thị gần diện tích và thông số của phòng." : "Shown alongside the room specifications."}</span>
+                  </div>
+                  <Clock3 size={22} aria-hidden="true" />
                 </div>
-              </div>
-
-              <label className="form-field">
-                <span>
-                  {vi ? "Thời gian thuê tối thiểu" : "Minimum booking"}
-                </span>
-                <input
-                  name={`detail_minimum_booking_${value}`}
-                  maxLength={120}
-                  defaultValue={cleanLegacyText(
-                    detail.minimum_booking[value],
-                    value,
-                  )}
-                  placeholder={
-                    vi ? "Ví dụ: Tối thiểu 2 giờ" : "Example: 2-hour minimum"
-                  }
-                />
-              </label>
-            </section>
-
-            <section className="studio-detail-content-card">
-              <div className="studio-detail-content-card-head">
-                <div>
-                  <strong>{vi ? "1. Giới thiệu" : "1. Introduction"}</strong>
-                  <span>
-                    {vi
-                      ? "Phần mở đầu ngay dưới thông số của phòng."
-                      : "The opening section below the room facts."}
-                  </span>
-                </div>
-              </div>
-
-              <div className="studio-detail-content-fields">
                 <label className="form-field">
-                  <span>{vi ? "Tiêu đề" : "Title"}</span>
+                  <span>{vi ? "Thời gian thuê tối thiểu" : "Minimum booking"}</span>
                   <input
-                    name={`detail_intro_title_${value}`}
-                    maxLength={180}
-                    defaultValue={cleanLegacyText(
-                      detail.intro_title[value],
-                      value,
-                    )}
+                    name={`detail_minimum_booking_${lang}`}
+                    maxLength={120}
+                    defaultValue={cleanLegacyText(detail.minimum_booking[lang], lang)}
+                    placeholder={vi ? "Ví dụ: Tối thiểu 2 giờ" : "Example: 2-hour minimum"}
                   />
                 </label>
+              </section>
 
-                <label className="form-field studio-detail-field-wide">
-                  <span>{vi ? "Nội dung giới thiệu" : "Introduction"}</span>
-                  <textarea
-                    name={`detail_intro_body_${value}`}
-                    maxLength={5000}
-                    defaultValue={cleanLegacyText(
-                      detail.intro_body[value],
-                      value,
-                    )}
-                  />
-                </label>
-              </div>
-            </section>
-
-            <section className="studio-detail-content-card">
-              <div className="studio-detail-content-card-head">
-                <div>
-                  <strong>
-                    {vi ? "2. Tiện ích & thiết bị" : "2. Amenities & equipment"}
-                  </strong>
-                  <span>
-                    {vi
-                      ? "Mỗi khối gồm tên nhóm và nội dung. Có thể thêm hoặc xóa tùy ý."
-                      : "Each block has a group name and content. Add or remove blocks as needed."}
-                  </span>
+              <section className="studio-detail-content-card oni-detail-editor-section-v2" id={sectionId("intro")}>
+                <div className="studio-detail-content-card-head">
+                  <div>
+                    <span className="oni-detail-editor-kicker-v2">02 / {vi ? "GIỚI THIỆU" : "INTRO"}</span>
+                    <strong>{vi ? "Giới thiệu phòng" : "Room introduction"}</strong>
+                    <span>{vi ? "Có thể xuống dòng để chia ý rõ ràng." : "Use line breaks to separate paragraphs."}</span>
+                  </div>
+                  <BookOpenText size={22} aria-hidden="true" />
                 </div>
+                <div className="oni-detail-editor-field-stack-v2">
+                  <label className="form-field">
+                    <span>{vi ? "Tiêu đề" : "Title"}</span>
+                    <input
+                      name={`detail_intro_title_${lang}`}
+                      maxLength={180}
+                      defaultValue={cleanLegacyText(detail.intro_title[lang], lang)}
+                    />
+                  </label>
+                  <label className="form-field">
+                    <span>{vi ? "Nội dung giới thiệu" : "Introduction text"}</span>
+                    <textarea
+                      name={`detail_intro_body_${lang}`}
+                      rows={5}
+                      maxLength={5000}
+                      defaultValue={cleanLegacyText(detail.intro_body[lang], lang)}
+                    />
+                  </label>
+                </div>
+              </section>
 
-                <button
-                  type="button"
-                  className="button button-outline studio-detail-add-button"
-                  onClick={() => addGroup(value)}
-                >
-                  <Plus size={15} aria-hidden="true" />
-                  {vi ? "Thêm nhóm" : "Add group"}
-                </button>
-              </div>
+              <section className="studio-detail-content-card oni-detail-editor-section-v2" id={sectionId("amenities")}>
+                <div className="studio-detail-content-card-head">
+                  <div>
+                    <span className="oni-detail-editor-kicker-v2">03 / {vi ? "THIẾT BỊ" : "EQUIPMENT"}</span>
+                    <strong>{vi ? "Không gian & thiết bị" : "Space & equipment"}</strong>
+                    <span>{vi ? "Mỗi nhóm tạo đúng một thẻ trên website." : "Each group becomes exactly one card on the website."}</span>
+                  </div>
+                  <button type="button" className="button button-outline studio-detail-add-button" onClick={() => addGroup(lang)}>
+                    <Plus size={16} aria-hidden="true" />
+                    {vi ? "Thêm nhóm" : "Add group"}
+                  </button>
+                </div>
+                <p className="oni-detail-editor-hint-v2">
+                  <LayoutList size={17} aria-hidden="true" />
+                  {vi
+                    ? "Nhấn Enter để thêm một dòng thiết bị. Dòng mới vẫn thuộc cùng nhóm — không tạo thêm thẻ."
+                    : "Press Enter for another equipment item. New lines stay in the same group."}
+                </p>
+                <input type="hidden" name={`detail_amenities_${lang}`} value={serializeGroups(amenities[lang])} readOnly />
+                <div className="studio-detail-repeat-list oni-detail-editor-group-list-v2">
+                  {amenities[lang].map((group, index) => {
+                    const entries = previewItems(group.body);
+                    return (
+                      <div className="studio-detail-repeat-card oni-detail-editor-group-v2" key={group.id}>
+                        <div className="oni-detail-editor-group-heading-v2">
+                          <div>
+                            <span className="oni-detail-editor-group-index-v2">{String(index + 1).padStart(2, "0")}</span>
+                            <strong>{group.title.trim() || (vi ? "Nhóm chưa đặt tên" : "Untitled group")}</strong>
+                            <span>{entries.length} {vi ? "dòng nội dung" : "items"}</span>
+                          </div>
+                          <button
+                            type="button"
+                            className="studio-detail-remove-button"
+                            aria-label={vi ? `Xóa nhóm ${index + 1}` : `Remove group ${index + 1}`}
+                            onClick={() => removeGroup(lang, group.id)}
+                          >
+                            <Trash2 size={16} aria-hidden="true" />
+                          </button>
+                        </div>
+                        <div className="oni-detail-editor-group-fields-v2">
+                          <label className="form-field">
+                            <span>{vi ? "Tên nhóm" : "Group name"}</span>
+                            <input
+                              value={group.title}
+                              onChange={(event) => updateGroup(lang, group.id, "title", event.target.value)}
+                              placeholder={vi ? "Ví dụ: Đèn chụp" : "Example: Studio lighting"}
+                            />
+                          </label>
+                          <label className="form-field">
+                            <span>{vi ? "Danh sách thiết bị (mỗi dòng một mục)" : "Equipment list (one item per line)"}</span>
+                            <textarea
+                              rows={Math.min(10, Math.max(5, group.body.split("\n").length + 2))}
+                              value={group.body}
+                              onChange={(event) => updateGroup(lang, group.id, "body", event.target.value)}
+                              placeholder={vi ? "Godox QS400\nGodox DP400\nNanlite FS300B" : "Godox QS400\nGodox DP400\nNanlite FS300B"}
+                            />
+                          </label>
+                        </div>
+                        <div className="oni-detail-editor-preview-v2">
+                          <div className="oni-detail-editor-preview-heading-v2">
+                            <CheckCircle2 size={16} aria-hidden="true" />
+                            <span>{vi ? "XEM TRƯỚC CÁCH HIỂN THỊ" : "LIVE PREVIEW"}</span>
+                          </div>
+                          {entries.length ? (
+                            <ul>{entries.map((entry, itemIndex) => <li key={`${group.id}-${itemIndex}`}>{entry}</li>)}</ul>
+                          ) : (
+                            <p>{vi ? "Nhập danh sách để xem trước từng dòng tại đây." : "Enter items to preview them here."}</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
 
-              <input
-                type="hidden"
-                name={`detail_amenities_${value}`}
-                value={serializeGroups(amenities[value])}
-                readOnly
-              />
-
-              <div className="studio-detail-repeat-list">
-                {amenities[value].map((item, index) => (
-                  <div className="studio-detail-repeat-card" key={item.id}>
-                    <div className="studio-detail-repeat-index">
-                      <span>{String(index + 1).padStart(2, "0")}</span>
-                      <button
-                        type="button"
-                        className="studio-detail-remove-button"
-                        onClick={() => removeGroup(value, item.id)}
-                        aria-label={vi ? "Xóa nhóm" : "Remove group"}
-                      >
-                        <Trash2 size={15} aria-hidden="true" />
+              <section className="studio-detail-content-card oni-detail-editor-section-v2" id={sectionId("rules")}>
+                <div className="studio-detail-content-card-head">
+                  <div>
+                    <span className="oni-detail-editor-kicker-v2">04 / {vi ? "QUY ĐỊNH" : "RULES"}</span>
+                    <strong>{vi ? "Quy định & lưu ý" : "Rules & notes"}</strong>
+                    <span>{vi ? "Mỗi quy định là một mục; có thể xuống dòng bên trong mỗi mục." : "Each rule is separate and supports line breaks."}</span>
+                  </div>
+                  <button type="button" className="button button-outline studio-detail-add-button" onClick={() => addRule(lang)}>
+                    <Plus size={16} aria-hidden="true" />
+                    {vi ? "Thêm quy định" : "Add rule"}
+                  </button>
+                </div>
+                <label className="form-field">
+                  <span>{vi ? "Tiêu đề phần" : "Section title"}</span>
+                  <input
+                    name={`detail_rules_title_${lang}`}
+                    maxLength={180}
+                    defaultValue={cleanLegacyText(detail.rules_title[lang], lang)}
+                  />
+                </label>
+                <input type="hidden" name={`detail_rules_${lang}`} value={serializeRules(rules[lang])} readOnly />
+                <div className="studio-detail-rule-list oni-detail-editor-rules-v2">
+                  {rules[lang].map((rule, index) => (
+                    <div className="studio-detail-rule-row oni-detail-editor-rule-v2" key={rule.id}>
+                      <span className="studio-detail-rule-number">{index + 1}</span>
+                      <textarea
+                        rows={3}
+                        value={rule.text}
+                        onChange={(event) => updateRule(lang, rule.id, event.target.value)}
+                        aria-label={vi ? `Quy định ${index + 1}` : `Rule ${index + 1}`}
+                      />
+                      <button type="button" className="studio-detail-remove-button" onClick={() => removeRule(lang, rule.id)} aria-label={vi ? "Xóa quy định" : "Remove rule"}>
+                        <Trash2 size={16} aria-hidden="true" />
                       </button>
                     </div>
-
-                    <div className="studio-detail-repeat-fields">
-                      <label className="form-field">
-                        <span>{vi ? "Tên nhóm" : "Group name"}</span>
-                        <input
-                          value={item.title}
-                          onChange={(event) =>
-                            updateGroup(
-                              value,
-                              item.id,
-                              "title",
-                              event.target.value,
-                            )
-                          }
-                          placeholder={
-                            vi ? "Ví dụ: Softbox" : "Example: Softboxes"
-                          }
-                        />
-                      </label>
-
-                      <label className="form-field">
-                        <span>{vi ? "Nội dung" : "Content"}</span>
-                        <textarea
-                          value={item.body}
-                          onChange={(event) =>
-                            updateGroup(
-                              value,
-                              item.id,
-                              "body",
-                              event.target.value,
-                            )
-                          }
-                          placeholder={
-                            vi
-                              ? "Nhập danh sách thiết bị hoặc tiện ích..."
-                              : "Enter equipment or amenity details..."
-                          }
-                        />
-                      </label>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section className="studio-detail-content-card">
-              <div className="studio-detail-content-card-head">
-                <div>
-                  <strong>
-                    {vi ? "3. Quy định & lưu ý" : "3. Rules & notes"}
-                  </strong>
-                  <span>
-                    {vi
-                      ? "Thêm từng quy định thành một mục riêng."
-                      : "Add each rule as a separate item."}
-                  </span>
+                  ))}
                 </div>
-
-                <button
-                  type="button"
-                  className="button button-outline studio-detail-add-button"
-                  onClick={() => addRule(value)}
-                >
-                  <Plus size={15} aria-hidden="true" />
-                  {vi ? "Thêm quy định" : "Add rule"}
-                </button>
-              </div>
-
-              <label className="form-field">
-                <span>{vi ? "Tiêu đề phần" : "Section title"}</span>
-                <input
-                  name={`detail_rules_title_${value}`}
-                  maxLength={180}
-                  defaultValue={cleanLegacyText(
-                    detail.rules_title[value],
-                    value,
-                  )}
-                />
-              </label>
-
-              <input
-                type="hidden"
-                name={`detail_rules_${value}`}
-                value={serializeRules(rules[value])}
-                readOnly
-              />
-
-              <div className="studio-detail-rule-list">
-                {rules[value].map((item, index) => (
-                  <div className="studio-detail-rule-row" key={item.id}>
-                    <span className="studio-detail-rule-number">
-                      {index + 1}
-                    </span>
-
-                    <textarea
-                      value={item.text}
-                      onChange={(event) =>
-                        updateRule(value, item.id, event.target.value)
-                      }
-                      aria-label={
-                        vi
-                          ? `Quy định ${index + 1}`
-                          : `Rule ${index + 1}`
-                      }
-                    />
-
-                    <button
-                      type="button"
-                      className="studio-detail-remove-button"
-                      onClick={() => removeRule(value, item.id)}
-                      aria-label={vi ? "Xóa quy định" : "Remove rule"}
-                    >
-                      <Trash2 size={15} aria-hidden="true" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              <label className="form-field">
-                <span>{vi ? "Ghi chú cuối" : "Closing note"}</span>
-                <textarea
-                  name={`detail_note_${value}`}
-                  maxLength={3000}
-                  defaultValue={cleanLegacyText(
-                    detail.note[value],
-                    value,
-                  )}
-                />
-              </label>
-            </section>
-
-            <section className="studio-detail-content-card">
-              <div className="studio-detail-content-card-head">
-                <div>
-                  <strong>{vi ? "4. Liên hệ" : "4. Contact"}</strong>
-                  <span>
-                    {vi
-                      ? "Viết trực tiếp nội dung khách hàng sẽ đọc. Không cần dùng biến hoặc mã."
-                      : "Write exactly what customers should read. No variables or special codes are needed."}
-                  </span>
-                </div>
-              </div>
-
-              <div className="studio-detail-content-fields">
                 <label className="form-field">
-                  <span>{vi ? "Tiêu đề" : "Title"}</span>
-                  <input
-                    name={`detail_inquiry_title_${value}`}
-                    maxLength={180}
-                    defaultValue={cleanLegacyText(
-                      detail.inquiry_title[value],
-                      value,
-                    )}
-                  />
+                  <span>{vi ? "Ghi chú cuối" : "Closing note"}</span>
+                  <textarea name={`detail_note_${lang}`} rows={4} maxLength={3000} defaultValue={cleanLegacyText(detail.note[lang], lang)} />
                 </label>
+              </section>
 
-                <label className="form-field studio-detail-field-wide">
-                  <span>{vi ? "Nội dung" : "Message"}</span>
-                  <textarea
-                    name={`detail_inquiry_body_${value}`}
-                    maxLength={3000}
-                    defaultValue={cleanLegacyText(
-                      detail.inquiry_body[value],
-                      value,
-                    )}
-                    placeholder={
-                      vi
-                        ? "Ví dụ: Gửi ngày chụp và thời lượng mong muốn cho Oni để kiểm tra lịch."
-                        : "Example: Send Oni your preferred date and duration to check availability."
-                    }
-                  />
-                </label>
-              </div>
-            </section>
+              <section className="studio-detail-content-card oni-detail-editor-section-v2" id={sectionId("contact")}>
+                <div className="studio-detail-content-card-head">
+                  <div>
+                    <span className="oni-detail-editor-kicker-v2">05 / {vi ? "LIÊN HỆ" : "CONTACT"}</span>
+                    <strong>{vi ? "Liên hệ & tư vấn" : "Contact & inquiries"}</strong>
+                    <span>{vi ? "Nội dung giới thiệu khách liên hệ với studio." : "Invitation to contact the studio."}</span>
+                  </div>
+                  <MessageCircle size={22} aria-hidden="true" />
+                </div>
+                <div className="oni-detail-editor-field-stack-v2">
+                  <label className="form-field">
+                    <span>{vi ? "Tiêu đề" : "Title"}</span>
+                    <input name={`detail_inquiry_title_${lang}`} maxLength={180} defaultValue={cleanLegacyText(detail.inquiry_title[lang], lang)} />
+                  </label>
+                  <label className="form-field">
+                    <span>{vi ? "Nội dung" : "Message"}</span>
+                    <textarea name={`detail_inquiry_body_${lang}`} rows={5} maxLength={3000} defaultValue={cleanLegacyText(detail.inquiry_body[lang], lang)} />
+                  </label>
+                </div>
+              </section>
+            </div>
           </div>
         );
       })}
+
+      <div className="oni-detail-editor-savebar-v2">
+        <div>
+          <span className={`oni-detail-editor-dot-v2${dirty ? " is-dirty" : ""}`} />
+          <p>{dirty ? "Có thay đổi chưa lưu" : "Nội dung đang hiển thị đã được tải"}</p>
+        </div>
+        <button type="button" className="button studio-detail-save-button oni-detail-editor-save-v2" disabled={pending || !studioId} onClick={saveDetail}>
+          <Save size={17} aria-hidden="true" />
+          {pending ? "Đang lưu..." : "Lưu thay đổi"}
+        </button>
+      </div>
+
       {snackbar && (
-        <p
-          className={`notice ${
-            snackbar.type === "success" ? "success" : "error"
-          }`}
-          role={snackbar.type === "success" ? "status" : "alert"}
-        >
-          {snackbar.text}
-        </p>
+        <div className={`oni-detail-editor-toast-v2 ${snackbar.kind}`} role={snackbar.kind === "error" ? "alert" : "status"}>
+          {snackbar.kind === "error" ? <AlertCircle size={18} aria-hidden="true" /> : <CheckCircle2 size={18} aria-hidden="true" />}
+          <span>{snackbar.message}</span>
+        </div>
       )}
     </section>
   );

@@ -79,9 +79,12 @@ function expandLegacyAmenityGroups(
   return recovered.length > 1 ? recovered : groups;
 }
 
+// oni-studio-amenity-items-v1
+// oni-studio-detail-client-items-v2
+// A newline in the Admin textarea becomes a separate item in the same card.
 function splitAmenityItems(body: string) {
   const items = body
-    .split("·")
+    .split(/\r?\n|\s*\u00b7\s*/)
     .map((item) => item.trim())
     .filter(Boolean);
 
@@ -89,7 +92,7 @@ function splitAmenityItems(body: string) {
 }
 
 function expandLegacyRules(rules: string[]) {
-  if (rules.length !== 1 || rules[0].length < 140) return rules;
+  if (rules.length !== 1 || rules[0].length < 140 || rules[0].includes("\n")) return rules;
 
   const split = rules[0]
     .split(/\.\s+(?=[A-ZÀ-Ỹ])/u)
@@ -157,9 +160,6 @@ export default async function StudioDetail({ params }: Props) {
 
         <div className="detail-price">
           <strong>{money(studio.price, locale)}</strong>
-          <span>
-            / {locale === "vi" ? "giờ · đã gồm VAT" : "hour · VAT included"}
-          </span>
         </div>
       </div>
 
@@ -171,7 +171,8 @@ export default async function StudioDetail({ params }: Props) {
         }
         name={studio.name}
         locale={locale}
-        fit="cover"
+        fit="contain"
+        adaptiveAspectRatio
         caption={
           !studio.images.length
             ? locale === "vi"

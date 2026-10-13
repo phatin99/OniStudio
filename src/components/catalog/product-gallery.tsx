@@ -9,14 +9,17 @@ export function ProductGallery({
   locale,
   fit = "contain",
   caption,
+  adaptiveAspectRatio = false,
 }: {
   images: string[];
   name: string;
   locale: Locale;
   fit?: "contain" | "cover";
   caption?: string;
+  adaptiveAspectRatio?: boolean;
 }) {
   const [selected, setSelected] = useState(0);
+  const [aspectRatios, setAspectRatios] = useState<Record<string, number>>({});
   const dialog = useRef<HTMLDialogElement>(null);
   const start = useRef<{ x: number; y: number } | null>(null);
   function step(delta: number) {
@@ -41,6 +44,11 @@ export function ProductGallery({
     >
       <div
         className="gallery-stage"
+        style={
+          adaptiveAspectRatio
+            ? { aspectRatio: aspectRatios[images[current]] ?? 16 / 10 }
+            : undefined
+        }
         onTouchStart={(e) => {
           start.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         }}
@@ -60,8 +68,20 @@ export function ProductGallery({
           src={images[current]}
           alt={`${name} — ${label} ${current + 1}`}
           fill
-          sizes="(max-width: 800px) 100vw, 60vw"
+          sizes={adaptiveAspectRatio ? "(max-width: 800px) 100vw, (max-width: 1400px) 90vw, 1600px" : "(max-width: 800px) 100vw, 60vw"}
           priority={current === 0}
+          onLoad={(event) => {
+            if (!adaptiveAspectRatio) return;
+            const { naturalWidth, naturalHeight } = event.currentTarget;
+            if (naturalWidth <= 0 || naturalHeight <= 0) return;
+            const ratio = naturalWidth / naturalHeight;
+            const imageSrc = images[current];
+            setAspectRatios((previous) =>
+              previous[imageSrc] === ratio
+                ? previous
+                : { ...previous, [imageSrc]: ratio },
+            );
+          }}
         />
         <button
           className="icon-button gallery-expand"

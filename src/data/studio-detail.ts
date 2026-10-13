@@ -255,30 +255,48 @@ export function renderStudioTemplate(
     .replaceAll("{led_count}", String(studio.led_count));
 }
 
+// oni-studio-amenity-parser-v1
+// One titled line starts a group. Untitled legacy lines belong to that group.
+// Literal "\\n" represents a line break within a group's content.
+// oni-studio-detail-group-format-v2
+// Each line with "|" begins a group; encoded "\\n" means a line break inside it.
+// Older unlabelled lines are reattached to the previous group.
 export function studioDetailBlocks(raw: string) {
-  return raw
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      const separator = line.indexOf("|");
+  const groups: { title: string; body: string }[] = [];
+  const decode = (text: string) => text.replace(/\\n/g, "\n");
 
-      if (separator < 0) {
-        return { title: "", body: line };
-      }
+  for (const sourceLine of raw.split(/\r?\n/)) {
+    const line = sourceLine.trim();
+    if (!line) continue;
+    const separator = line.indexOf("|");
 
-      return {
+    if (separator !== -1) {
+      groups.push({
         title: line.slice(0, separator).trim(),
-        body: line.slice(separator + 1).trim(),
-      };
-    });
+        body: decode(line.slice(separator + 1).trim()),
+      });
+      continue;
+    }
+
+    const previous = groups[groups.length - 1];
+    if (previous && previous.title) {
+      previous.body = previous.body
+        ? `${previous.body}\n${decode(line)}`
+        : decode(line);
+    } else {
+      groups.push({ title: "", body: decode(line) });
+    }
+  }
+
+  return groups;
 }
 
 export function studioDetailRules(raw: string) {
   return raw
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((line) => line.replace(/\\n/g, "\n"));
 }
 
 function compactNumber(value: number) {

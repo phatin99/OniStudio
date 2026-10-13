@@ -133,5 +133,5 @@ export default function HomePage() {
     <Suspense fallback={<HomeFallback />}>
       <HomeContent />
     </Suspense>
-  );
-}
+    );
+  }

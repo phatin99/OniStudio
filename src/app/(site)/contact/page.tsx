@@ -15,6 +15,9 @@ import { context } from "@/lib/i18n";
 import { site } from "@/data/site";
 import { pageMetadata } from "@/lib/metadata";
 
+const oniStudioEmbedMapUrl = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3919.4935760424764!2d106.64788207480484!3d10.773458189375178!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31752f2d5377bdbb%3A0x32ef1fe5a07c3d23!2sOni%20Studio!5e0!3m2!1svi!2s!4v1791850743129!5m2!1svi!2s";
+const oniStudioMapsOpenUrl = "https://www.google.com/maps/search/?api=1&query=10.773458189375178%2C106.64788207480484";
+
 export function generateMetadata() {
   return pageMetadata(
     { vi: "Liên hệ & địa chỉ", en: "Contact & visit" },
@@ -211,7 +214,7 @@ export default async function Contact() {
               <ArrowUpRight size={18} className="oni-contact-v5-link-arrow" aria-hidden="true" />
             </a>
           </div>
-          <a className="oni-contact-v5-address" href={site.map} target="_blank" rel="noopener noreferrer">
+          <a className="oni-contact-v5-address" href={oniStudioMapsOpenUrl} target="_blank" rel="noopener noreferrer">
             <MapPin size={17} aria-hidden="true" />
             <span>{site.address[locale]}</span>
             <ArrowUpRight size={16} aria-hidden="true" />
@@ -232,7 +235,7 @@ export default async function Contact() {
 
           <a
             className="contact-v3-map-link"
-            href={site.map}
+            href={oniStudioMapsOpenUrl}
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -245,9 +248,9 @@ export default async function Contact() {
           <div className="contact-v3-map-frame">
             <iframe
               title={vi ? "Bản đồ đến Oni Studio" : "Directions to Oni Studio"}
-              src={site.mapEmbed}
+              src={oniStudioEmbedMapUrl}
               loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
+              referrerPolicy="strict-origin-when-cross-origin"
               allowFullScreen
             />
           </div>
