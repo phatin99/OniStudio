@@ -138,8 +138,7 @@ const loadCatalog = unstable_cache(
       .eq("published", true)
       .order("sort_order"),
     db
-      .from("equipment_categories")
-      .select("id,slug,name,sort_order")
+      .from("equipment_categories").select("id,slug,name,sort_order,is_visible")
       .neq("slug", "backdrop")
       .order("sort_order"),
     db

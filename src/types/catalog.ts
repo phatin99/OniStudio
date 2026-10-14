@@ -11,6 +11,7 @@ export interface EquipmentCategory {
   slug: string;
   name: Localized;
   sort_order: number;
+  is_visible?: boolean;
 }
 
 export interface EquipmentUnit {

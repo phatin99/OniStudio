@@ -35,7 +35,7 @@ export function EquipmentExplorer({
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [source, setSource] = useState<SourceFilter>("internal");
-  const [sort, setSort] = useState("default");
+  const [sort, setSort] = useState("low");
 
   const externalCount = items.filter(
     (item) => item.rental_source === "external",
@@ -52,24 +52,32 @@ export function EquipmentExplorer({
     .filter(
       (item) =>
         (category === "all" || item.category === category) &&
+        (sort !== "free" || item.included || item.price === 0) &&
         normalize(
           `${item.name} ${item.name_en} ${item.description[locale]}`,
         ).includes(normalize(query)),
     )
     .sort((a, b) => {
-      if (sort === "low") {
-        return (a.price ?? 0) - (b.price ?? 0);
-      }
+      if (sort === "low" || sort === "high") {
+        const aPrice = a.included ? 0 : a.price;
+        const bPrice = b.included ? 0 : b.price;
 
-      if (sort === "high") {
-        return (b.price ?? 0) - (a.price ?? 0);
-      }
+        if (aPrice === null || bPrice === null) {
+          if (aPrice === null && bPrice === null) {
+            return a.sort_order - b.sort_order;
+          }
+          return aPrice === null ? 1 : -1;
+        }
 
+        const difference = sort === "low" ? aPrice - bPrice : bPrice - aPrice;
+        return difference || a.sort_order - b.sort_order;
+      }
 
       return a.sort_order - b.sort_order || a.name.localeCompare(b.name);
     });
 
   const visibleCategories = categories.filter((entry) =>
+    entry.is_visible !== false &&
     sourceItems.some((item) => item.category === entry.slug),
   );
 
@@ -145,8 +153,8 @@ export function EquipmentExplorer({
                 value={sort}
                 onChange={(event) => setSort(event.target.value)}
               >
-                <option value="default">
-                  {locale === "vi" ? "Mặc định" : "Default"}
+                <option value="free">
+                  {locale === "vi" ? "Miễn phí" : "Free"}
                 </option>
                 <option value="low">
                   {locale === "vi"
@@ -233,6 +241,7 @@ export function EquipmentExplorer({
               setQuery("");
               setCategory("all");
               setSource("internal");
+              setSort("low");
             }}
           >
             {locale === "vi" ? "Xóa bộ lọc" : "Clear filters"}

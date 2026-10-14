@@ -162,6 +162,20 @@ export async function deleteEquipment(
   redirect("/admin/equipment?deleted=1");
 }
 
+// oni-category-visibility-order-v2:start
+// Category mutations are serialized inside Supabase RPC transactions.
+// See migration 150_equipment_category_visibility_order.sql.
+function categoryMutationError(error: { code?: string; message?: string } | null) {
+  if (!error) return "Không thể cập nhật danh mục.";
+  if (error.code === "23505") return "Đường dẫn danh mục đã tồn tại. Vui lòng chọn slug khác.";
+  if (error.code === "23503") return "Danh mục đang được thiết bị sử dụng. Hãy chuyển thiết bị trước khi xóa.";
+  if (["42883", "PGRST202", "42703", "PGRST204"].includes(error.code ?? "")) {
+    return "Chưa cập nhật Supabase. Hãy chạy migration 150_equipment_category_visibility_order.sql.";
+  }
+  if (error.code === "42501") return "Không có quyền quản trị. Vui lòng đăng nhập lại.";
+  return "Không thể lưu thay đổi. Kiểm tra kết nối và Supabase (" + (error.code ?? "UNKNOWN") + ").";
+}
+
 export async function saveEquipmentCategory(
   id: string | null,
   _previous: ActionState,
@@ -171,41 +185,59 @@ export async function saveEquipmentCategory(
   try {
     if (id) uuid(id);
     payload = {
-      slug: slug(form),
-      name: {
-        vi: text(form, "name_vi", 120),
-        en: text(form, "name_en", 120),
-      },
-      sort_order: integer(form, "sort_order", 100000),
+      p_id: id,
+      p_slug: slug(form),
+      p_name_vi: text(form, "name_vi", 120),
+      p_name_en: text(form, "name_en", 120),
+      p_is_visible: id ? null : true,
     };
   } catch (error) {
-    return {
-      error: error instanceof Error ? error.message : "Danh mục không hợp lệ.",
-    };
+    return { error: error instanceof Error ? error.message : "Danh mục không hợp lệ." };
   }
 
   const session = await requireAdmin().catch(() => null);
-  if (!session) return { error: "Vui lòng đăng nhập lại." };
-
-  const query = id
-    ? session.db.from("equipment_categories").update(payload).eq("id", id)
-    : session.db.from("equipment_categories").insert(payload);
-  const { data, error } = await query.select("id").single();
-
-  if (error || !data) {
-    if (error?.code === "23505") {
-      return { error: "Slug danh mục đã tồn tại." };
-    }
-    return { error: dbMessage(error?.code) };
-  }
-
+  if (!session) return { error: "Phiên quản trị hết hạn. Hãy đăng nhập lại." };
+  const { data, error } = await session.db.rpc("save_equipment_category_v2", payload);
+  if (error || !data) return { error: categoryMutationError(error) };
   revalidateEquipmentCategories();
-
-  if (id) {
-    return { success: "Đã cập nhật danh mục." };
-  }
-
+  if (id) return { success: "Đã lưu tên danh mục và đường dẫn." };
   redirect("/admin/categories?saved=1");
+}
+
+export async function setEquipmentCategoryVisibility(
+  id: string,
+  visible: boolean,
+): Promise<ActionState> {
+  try { uuid(id); } catch { return { error: "Danh mục không hợp lệ." }; }
+  if (typeof visible !== "boolean") return { error: "Trạng thái không hợp lệ." };
+  const session = await requireAdmin().catch(() => null);
+  if (!session) return { error: "Phiên quản trị hết hạn." };
+  const { error } = await session.db.rpc("set_equipment_category_visibility_v2", {
+    p_id: id,
+    p_visible: visible,
+  });
+  if (error) return { error: categoryMutationError(error) };
+  revalidateEquipmentCategories();
+  return { success: visible ? "Danh mục đã hiện trên bộ lọc của khách." : "Danh mục đã ẩn khỏi bộ lọc của khách." };
+}
+
+export async function setEquipmentCategoryPosition(
+  id: string,
+  position: number,
+): Promise<ActionState> {
+  try { uuid(id); } catch { return { error: "Danh mục không hợp lệ." }; }
+  if (!Number.isSafeInteger(position) || position < 1 || position > 100000) {
+    return { error: "Vị trí không hợp lệ." };
+  }
+  const session = await requireAdmin().catch(() => null);
+  if (!session) return { error: "Phiên quản trị hết hạn." };
+  const { error } = await session.db.rpc("set_equipment_category_position_v2", {
+    p_id: id,
+    p_position: position,
+  });
+  if (error) return { error: categoryMutationError(error) };
+  revalidateEquipmentCategories();
+  return { success: "Đã lưu vị trí danh mục trên website." };
 }
 
 export async function deleteEquipmentCategory(
@@ -213,34 +245,15 @@ export async function deleteEquipmentCategory(
   _previous: ActionState,
 ): Promise<ActionState> {
   void _previous;
-  try {
-    uuid(id);
-  } catch {
-    return { error: "ID danh mục không hợp lệ." };
-  }
-
+  try { uuid(id); } catch { return { error: "Danh mục không hợp lệ." }; }
   const session = await requireAdmin().catch(() => null);
-  if (!session) return { error: "Vui lòng đăng nhập lại." };
-
-  const { data, error } = await session.db
-    .from("equipment_categories")
-    .delete()
-    .eq("id", id)
-    .select("id")
-    .single();
-
-  if (error?.code === "23503") {
-    return {
-      error:
-        "Không thể xóa danh mục đang có thiết bị. Hãy chuyển thiết bị sang danh mục khác trước.",
-    };
-  }
-  if (error || !data) return { error: dbMessage(error?.code) };
-
+  if (!session) return { error: "Phiên quản trị hết hạn." };
+  const { error } = await session.db.rpc("delete_equipment_category_v2", { p_id: id });
+  if (error) return { error: categoryMutationError(error) };
   revalidateEquipmentCategories();
-  return { success: "Đã xóa danh mục." };
+  return { success: "Đã xóa và sắp lại thứ tự danh mục." };
 }
-
+// oni-category-visibility-order-v2:end
 export async function addEquipmentUnits(
   equipmentId: string,
   _previous: ActionState,
