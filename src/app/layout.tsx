@@ -5,9 +5,7 @@ import "@/styles/fonts.css";
 import "@/styles/editorial.css";
 import "@/styles/media.css";
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
-  ),
+  metadataBase: new URL("https://www.onistudio.vn"),
   title: {
     default: "Oni Studio — Không gian cho sáng tạo",
     template: "%s | Oni Studio",
